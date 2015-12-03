@@ -36,9 +36,9 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
     #
     config :thisboot, :validate => :boolean, :default => true
 
-    # Lowercase annoying UPPERCASE fieldnames. (May clobber existing fields)
+    # Lowercase annoying UPPERCASE fieldnames, remove underscore prefixes. (May clobber existing fields)
     #
-    config :lowercase, :validate => :boolean, :default => false
+    config :pretty_keys, :validate => :boolean, :default => false
 
     # Where to write the sincedb database (keeps track of the current
     # position of the journal). The default will write
@@ -118,7 +118,7 @@ class LogStash::Inputs::Journald < LogStash::Inputs::Threadable
         @journal.watch do |entry|
             timestamp = entry.realtime_timestamp
             event = LogStash::Event.new(
-                entry.to_h_lower(@lowercase).merge(
+                entry.to_h_pretty(@pretty_keys).merge(
                     "@timestamp" => timestamp,
                     "host" => entry._hostname || @hostname,
                     "cursor" => @journal.cursor
@@ -152,9 +152,12 @@ end # class LogStash::Inputs::Journald
 # Monkey patch Systemd::JournalEntry
 module Systemd
     class JournalEntry
-        def to_h_lower(is_lowercase)
-            if is_lowercase
-                @entry.each_with_object({}) { |(k, v), h| h[k.downcase] = v.dup.force_encoding('iso-8859-1').encode('utf-8') }
+        def to_h_pretty(is_pretty)
+            if is_pretty
+                @entry.each_with_object({}) { |(k, v), h|
+                    key = k.downcase.sub /^_*/, ''
+                    h[key] = v.dup.force_encoding('iso-8859-1').encode('utf-8') 
+                }
             else
                 @entry.each_with_object({}) { |(k, v), h| h[k] = v.dup.force_encoding('iso-8859-1').encode('utf-8') }
             end
