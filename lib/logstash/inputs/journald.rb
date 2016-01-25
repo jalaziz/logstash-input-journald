@@ -154,9 +154,9 @@ module Systemd
     class JournalEntry
         def to_h_pretty(is_pretty)
             if is_pretty
-                @entry.each_with_object({}) { |(k, v), h|
-                    key = k.downcase.sub /^_*/, ''
-                    h[key] = v.dup.force_encoding('iso-8859-1').encode('utf-8') 
+              @entry.each_with_object({}) { |(k, v), h|
+                    k[0] = '' if k[0] == '_'
+                    h[k.downcase] = v.dup.force_encoding('iso-8859-1').encode('utf-8') 
                 }
             else
                 @entry.each_with_object({}) { |(k, v), h| h[k] = v.dup.force_encoding('iso-8859-1').encode('utf-8') }
